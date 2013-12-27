@@ -3,7 +3,7 @@ from scrapy.item import Item, Field
 
 
 class ScoreItem(Item):
-    url = Field()
+    id = Field()
     date = Field()
     time = Field()
     host = Field()
