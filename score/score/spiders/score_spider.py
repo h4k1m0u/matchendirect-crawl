@@ -10,7 +10,7 @@ from sunburnt import SolrInterface
 class ScoreSpider(CrawlSpider):
     name = 'score'
     allowed_domains = ['matchendirect.fr']
-    start_urls = ['http://www.matchendirect.fr/hier/']
+    start_urls = ['http://www.matchendirect.fr/resultat-foot-26-12-2013/']
     rules = [Rule(SgmlLinkExtractor(allow=(r'/live-score/[a-z0-9\-]+\.html$', r'/foot-score/[a-z0-9\-]+\.html$')), 'parse_score')]
 
     # init solr instance
@@ -28,20 +28,23 @@ class ScoreSpider(CrawlSpider):
             table = league.xpath('following-sibling::table[@class="tableau"][1]')
             rows = table.xpath('tr')
             for row in rows:
-                score = ScoreItem()
-                score['id'] = 'http://www.matchendirect.fr' + row.xpath('td[@class="lm4"]/a/@href').extract().pop()
-                score['host'] = row.xpath('td[@class="lm3"]/a/text()').extract().pop()
-                score['visitor'] = row.xpath('td[@class="lm5"]/a/text()').extract().pop()
+                # if match has at least started
                 scoring = row.xpath('td[@class="lm4"]/a[not(span)]/text()').extract()
                 if scoring:
+                    score = ScoreItem()
+                    score['id'] = 'http://www.matchendirect.fr' + row.xpath('td[@class="lm4"]/a/@href').extract().pop()
+                    score['host'] = row.xpath('td[@class="lm3"]/a/text()').extract().pop()
+                    score['visitor'] = row.xpath('td[@class="lm5"]/a/text()').extract().pop()
+
                     scoringArr = scoring.pop().split(' - ')
                     score['scorehost'] = int(scoringArr[0])
                     score['scorevisitor'] = int(scoringArr[1])
-                leagueArr = league.xpath('a[1]/text()').extract().pop().split(' : ')
-                score['country'] = leagueArr[0]
-                score['league'] = leagueArr[1]
+                    
+                    leagueArr = league.xpath('a[1]/text()').extract().pop().split(' : ')
+                    score['country'] = leagueArr[0]
+                    score['league'] = leagueArr[1]
                 
-                docs.append(dict(score))
+                    docs.append(dict(score))
 
         # index crawled games
         self.si.add(docs)
@@ -51,52 +54,61 @@ class ScoreSpider(CrawlSpider):
     # get game details (goal scorer & time)
     def parse_score(self, response):
         sel = Selector(response)
-        score = ScoreItem()
+        # if match has at least started
+        scorehost = sel.xpath('//div[@id="match_score"]/div[@class="col2"]/text()').extract().pop().strip()
+        scorevisitor = sel.xpath('//div[@id="match_score"]/div[@class="col3"]/text()').extract().pop().strip()
+        
+        if scorehost and scorevisitor:
+            score = ScoreItem()
 
-        # get already indexed data 
-        solr_doc = self.si.query(id=response.url).execute()
-        if list(solr_doc):
-            doc = solr_doc[0]
-        else:
-            doc = {}
-            score['id'] = response.url
+            # get already indexed data 
+            solr_doc = self.si.query(id=response.url).execute()
+            if list(solr_doc):
+                doc = solr_doc[0]
+            else:
+                doc = {}
+                score['id'] = response.url
 
-        # get goals
-        table = sel.xpath('//table[@class="tableau match_evenement"]')
-        rows = table.xpath('tr')
-        score['goalscorershost'], score['goalscorersvisitor'], score['goaltimeshost'], score['goaltimesvisitor'] = ([], [], [], [])
-        for row in rows:
-            tdgoalhost = row.xpath(
-                'td[@class="c1" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
-            )
-            tdgoalvisitor = row.xpath(
-                'td[@class="c3" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
-            )
-            if tdgoalhost:
-                score['goaltimeshost'].append(
-                    tdgoalhost.xpath('following-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
+            # get goals
+            table = sel.xpath('//table[@class="tableau match_evenement"]')
+            rows = table.xpath('tr')
+            score['goalscorershost'], score['goalscorersvisitor'], score['goaltimeshost'], score['goaltimesvisitor'] = ([], [], [], [])
+            for row in rows:
+                tdgoalhost = row.xpath(
+                    'td[@class="c1" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
                 )
-                score['goalscorershost'].append(tdgoalhost.xpath('a/text()').extract().pop())
-            elif tdgoalvisitor:
-                score['goaltimesvisitor'].append(
-                    tdgoalvisitor.xpath('preceding-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
+                tdgoalvisitor = row.xpath(
+                    'td[@class="c3" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
                 )
-                score['goalscorersvisitor'].append(tdgoalvisitor.xpath('a/text()').extract().pop())
-            
-        # get time, refree & stadium
-        matchinfos = sel.xpath('//table[@id="match_entete_1"]/tr/td[@class="info"]/text()').extract()
-        date = format_date(matchinfos[0].lstrip('\n\t\r'))
-        time = matchinfos[1].split(' ')[-1].replace('h', ':') + ':00'
-        score['date'] = "%sT%sZ" % (date, time)
-        if len(matchinfos) == 4 and matchinfos[3].split(' : ')[1].strip(' -'):
-            score['referee'] = matchinfos[3].split(' : ')[1].lstrip('\n\t\r')
-        if len(matchinfos) >= 3 and not matchinfos[2].strip().startswith('Arbitre'):
-            score['stadium'] = matchinfos[2].lstrip('\n\t\r')
-            
-        # index all datas
-        doc = dict(doc.items() + dict(score).items())
-        self.si.add(doc)
-        self.si.commit()
+                if tdgoalhost:
+                    score['goaltimeshost'].append(
+                        tdgoalhost.xpath('following-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
+                    )
+                    score['goalscorershost'].append(tdgoalhost.xpath('a/text()').extract().pop())
+                elif tdgoalvisitor:
+                    score['goaltimesvisitor'].append(
+                        tdgoalvisitor.xpath('preceding-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
+                    )
+                    score['goalscorersvisitor'].append(tdgoalvisitor.xpath('a/text()').extract().pop())
+                
+            # get time, refree & stadium
+            matchinfos = sel.xpath('//table[@id="match_entete_1"]/tr/td[@class="info"]/text()').extract()
+            matchinfos.pop()
+            matchinfos = [x.lstrip('\n\t\r') for x in matchinfos]
+            if u'Arbitre : - ' in matchinfos:
+                matchinfos.remove(u'Arbitre : - ')
+            date = format_date(matchinfos[0])
+            time = matchinfos[1].split(' ')[-1].replace('h', ':') + ':00'
+            score['date'] = "%sT%sZ" % (date, time)
+            if len(matchinfos) >= 3:
+                score['stadium'] = matchinfos[2]
+                if len(matchinfos) == 4:
+                    score['referee'] = matchinfos[3].split(' : ')[1]
+                
+            # index all datas
+            doc = dict(doc.items() + dict(score).items())
+            self.si.add(doc)
+            self.si.commit()
 
 
 def format_date(date):
