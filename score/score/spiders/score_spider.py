@@ -10,7 +10,7 @@ from sunburnt import SolrInterface
 class ScoreSpider(CrawlSpider):
     name = 'score'
     allowed_domains = ['matchendirect.fr']
-    start_urls = ['http://www.matchendirect.fr/resultat-foot-26-12-2013/']
+    start_urls = ['http://www.matchendirect.fr/angleterre/barclays-premiership-premier-league/2013-49/']
     rules = [Rule(SgmlLinkExtractor(allow=(r'/live-score/[a-z0-9\-]+\.html$', r'/foot-score/[a-z0-9\-]+\.html$')), 'parse_score')]
 
     # init solr instance
@@ -28,9 +28,10 @@ class ScoreSpider(CrawlSpider):
             table = league.xpath('following-sibling::table[@class="tableau"][1]')
             rows = table.xpath('tr')
             for row in rows:
-                # if match has at least started
+                # if match has has started & is finished
                 scoring = row.xpath('td[@class="lm4"]/a[not(span)]/text()').extract()
-                if scoring:
+                isPlaying = row.xpath('td[@class="lm2_1"]').extract()
+                if scoring and not isPlaying:
                     score = ScoreItem()
                     score['id'] = 'http://www.matchendirect.fr' + row.xpath('td[@class="lm4"]/a/@href').extract().pop()
                     score['host'] = row.xpath('td[@class="lm3"]/a/text()').extract().pop()
@@ -54,11 +55,12 @@ class ScoreSpider(CrawlSpider):
     # get game details (goal scorer & time)
     def parse_score(self, response):
         sel = Selector(response)
-        # if match has at least started
+        # if match has started & is finished
         scorehost = sel.xpath('//div[@id="match_score"]/div[@class="col2"]/text()').extract().pop().strip()
         scorevisitor = sel.xpath('//div[@id="match_score"]/div[@class="col3"]/text()').extract().pop().strip()
+        isPlaying = sel.xpath('//div[@id="match_entete_2"]/img').extract()
         
-        if scorehost and scorevisitor:
+        if scorehost and scorevisitor and not isPlaying:
             score = ScoreItem()
 
             # get already indexed data 
@@ -74,22 +76,36 @@ class ScoreSpider(CrawlSpider):
             rows = table.xpath('tr')
             score['goalscorershost'], score['goalscorersvisitor'], score['goaltimeshost'], score['goaltimesvisitor'] = ([], [], [], [])
             for row in rows:
-                tdgoalhost = row.xpath(
-                    'td[@class="c1" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
-                )
-                tdgoalvisitor = row.xpath(
-                    'td[@class="c3" and span[@class="ico_evenement1" or @class="ico_evenement2" or @class="ico_evenement7"]]'
-                )
-                if tdgoalhost:
+                tdgoalhost = row.xpath('td[@class="c1" and span[@class="ico_evenement1"]]')
+                tdpenaltyhost = row.xpath('td[@class="c1" and span[@class="ico_evenement2"]]')
+                tdowngoalhost = row.xpath('td[@class="c1" and span[@class="ico_evenement7"]]')
+                tdgoalvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement1"]]')
+                tdpenaltyvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement2"]]')
+                tdowngoalvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement7"]]')
+                if tdgoalhost or tdpenaltyhost or tdowngoalhost:
+                    goal_type = ''
+                    if tdpenaltyhost:
+                        goal_type = 'Penalty '
+                        tdgoalhost = tdpenaltyhost
+                    elif tdowngoalhost:
+                        goal_type = 'OG '
+                        tdgoalhost = tdowngoalhost
                     score['goaltimeshost'].append(
                         tdgoalhost.xpath('following-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
                     )
-                    score['goalscorershost'].append(tdgoalhost.xpath('a/text()').extract().pop())
-                elif tdgoalvisitor:
+                    score['goalscorershost'].append(goal_type + tdgoalhost.xpath('a/text()').extract().pop())
+                elif tdgoalvisitor or tdpenaltyvisitor or tdowngoalvisitor:
+                    goal_type = ''
+                    if tdpenaltyvisitor:
+                        goal_type = 'Penalty '
+                        tdgoalvisitor = tdpenaltyvisitor
+                    elif tdowngoalvisitor:
+                        goal_type = 'OG '
+                        tdgoalvisitor = tdowngoalvisitor
                     score['goaltimesvisitor'].append(
                         tdgoalvisitor.xpath('preceding-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
                     )
-                    score['goalscorersvisitor'].append(tdgoalvisitor.xpath('a/text()').extract().pop())
+                    score['goalscorersvisitor'].append(goal_type + tdgoalvisitor.xpath('a/text()').extract().pop())
                 
             # get time, refree & stadium
             matchinfos = sel.xpath('//table[@id="match_entete_1"]/tr/td[@class="info"]/text()').extract()
