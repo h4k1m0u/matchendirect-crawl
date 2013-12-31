@@ -41,7 +41,7 @@ class ScoreSpider(CrawlSpider):
                     score['scorehost'] = int(scoringArr[0])
                     score['scorevisitor'] = int(scoringArr[1])
                     if score['scorehost'] == score['scorevisitor']:
-                        score['winner'] = 'draw'
+                        score['winner'] = 'Draw'
                     else:
                         score['winner'] = score['host'] if score['scorehost'] > score['scorevisitor'] else score['visitor']
                     
@@ -79,6 +79,7 @@ class ScoreSpider(CrawlSpider):
             table = sel.xpath('//table[@class="tableau match_evenement"]')
             rows = table.xpath('tr')
             score['goalscorershost'], score['goalscorersvisitor'], score['goaltimeshost'], score['goaltimesvisitor'] = ([], [], [], [])
+            score['penaltytimeshost'], score['penaltytimesvisitor'], score['ogtimeshost'], score['ogtimesvisitor'] = ([], [], [], [])
             for row in rows:
                 tdgoalhost = row.xpath('td[@class="c1" and span[@class="ico_evenement1"]]')
                 tdpenaltyhost = row.xpath('td[@class="c1" and span[@class="ico_evenement2"]]')
@@ -86,30 +87,24 @@ class ScoreSpider(CrawlSpider):
                 tdgoalvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement1"]]')
                 tdpenaltyvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement2"]]')
                 tdowngoalvisitor = row.xpath('td[@class="c3" and span[@class="ico_evenement7"]]')
-                if tdgoalhost or tdpenaltyhost or tdowngoalhost:
-                    goal_type = ''
+                tdgoalhost = tdgoalhost or tdpenaltyhost or tdowngoalhost
+                tdgoalvisitor = tdgoalvisitor or tdpenaltyvisitor or tdowngoalvisitor
+                if tdgoalhost:
+                    time = tdgoalhost.xpath('following-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
                     if tdpenaltyhost:
-                        goal_type = 'Penalty '
-                        tdgoalhost = tdpenaltyhost
+                        score['penaltytimeshost'].append(time)
                     elif tdowngoalhost:
-                        goal_type = 'OG '
-                        tdgoalhost = tdowngoalhost
-                    score['goaltimeshost'].append(
-                        tdgoalhost.xpath('following-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
-                    )
-                    score['goalscorershost'].append(goal_type + tdgoalhost.xpath('a/text()').extract().pop())
-                elif tdgoalvisitor or tdpenaltyvisitor or tdowngoalvisitor:
-                    goal_type = ''
+                        score['ogtimeshost'].append(time)
+                    score['goaltimeshost'].append(time)
+                    score['goalscorershost'].append(tdgoalhost.xpath('a/text()').extract().pop())
+                elif tdgoalvisitor:
+                    time = tdgoalvisitor.xpath('preceding-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
                     if tdpenaltyvisitor:
-                        goal_type = 'Penalty '
-                        tdgoalvisitor = tdpenaltyvisitor
+                        score['penaltytimesvisitor'].append(time)
                     elif tdowngoalvisitor:
-                        goal_type = 'OG '
-                        tdgoalvisitor = tdowngoalvisitor
-                    score['goaltimesvisitor'].append(
-                        tdgoalvisitor.xpath('preceding-sibling::td[@class="c2"][1]/text()').extract().pop().rstrip("'")
-                    )
-                    score['goalscorersvisitor'].append(goal_type + tdgoalvisitor.xpath('a/text()').extract().pop())
+                        score['ogtimesvisitor'].append(time)
+                    score['goaltimesvisitor'].append(time)
+                    score['goalscorersvisitor'].append(tdgoalvisitor.xpath('a/text()').extract().pop())
                 
             # get time, refree & stadium
             matchinfos = sel.xpath('//table[@id="match_entete_1"]/tr/td[@class="info"]/text()').extract()

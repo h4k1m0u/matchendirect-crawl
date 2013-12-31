@@ -66,20 +66,24 @@
  <fields>
     <!-- Matchendirect fields -->
     <field name="id" type="string" indexed="true" stored="true" required="true" />
-    <field name="host" type="text_general" indexed="true" stored="true" />
-    <field name="visitor" type="text_general" indexed="true" stored="true" />
+    <field name="host" type="string" indexed="true" stored="true" />
+    <field name="visitor" type="string" indexed="true" stored="true" />
     <field name="scorehost" type="tint" indexed="true" stored="true" />
     <field name="scorevisitor" type="tint" indexed="true" stored="true" />
-    <field name="winner" type="text_general" indexed="true" stored="true" />
-    <field name="goalscorershost" type="text_general" indexed="true" stored="true" multiValued="true" />
+    <field name="winner" type="string" indexed="true" stored="true" />
+    <field name="goalscorershost" type="string" indexed="true" stored="true" multiValued="true" />
     <field name="goaltimeshost" type="tint" indexed="true" stored="true" multiValued="true" />
-    <field name="goalscorersvisitor" type="text_general" indexed="true" stored="true" multiValued="true" />
+    <field name="penaltytimeshost" type="tint" indexed="true" stored="true" multiValued="true" />
+    <field name="ogtimeshost" type="tint" indexed="true" stored="true" multiValued="true" />
+    <field name="goalscorersvisitor" type="string" indexed="true" stored="true" multiValued="true" />
     <field name="goaltimesvisitor" type="tint" indexed="true" stored="true" multiValued="true" />
+    <field name="penaltytimesvisitor" type="tint" indexed="true" stored="true" multiValued="true" />
+    <field name="ogtimesvisitor" type="tint" indexed="true" stored="true" multiValued="true" />
     <field name="date" type="date" indexed="true" stored="true" />
-    <field name="league" type="text_general" indexed="true" stored="true" />
-    <field name="country" type="text_general" indexed="true" stored="true" />
-    <field name="referee" type="text_general" indexed="true" stored="true" />
-    <field name="stadium" type="text_general" indexed="true" stored="true" />
+    <field name="league" type="string" indexed="true" stored="true" />
+    <field name="country" type="string" indexed="true" stored="true" />
+    <field name="referee" type="string" indexed="true" stored="true" />
+    <field name="stadium" type="string" indexed="true" stored="true" />
     <field name="_version_" type="long" indexed="true" stored="true" />
  </fields>
 
