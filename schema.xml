@@ -70,6 +70,7 @@
     <field name="visitor" type="text_general" indexed="true" stored="true" />
     <field name="scorehost" type="tint" indexed="true" stored="true" />
     <field name="scorevisitor" type="tint" indexed="true" stored="true" />
+    <field name="winner" type="text_general" indexed="true" stored="true" />
     <field name="goalscorershost" type="text_general" indexed="true" stored="true" multiValued="true" />
     <field name="goaltimeshost" type="tint" indexed="true" stored="true" multiValued="true" />
     <field name="goalscorersvisitor" type="text_general" indexed="true" stored="true" multiValued="true" />

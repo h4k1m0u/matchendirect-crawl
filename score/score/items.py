@@ -8,6 +8,7 @@ class ScoreItem(Item):
     time = Field()
     host = Field()
     visitor = Field()
+    winner = Field()
     scorehost = Field()
     scorevisitor = Field()
     league = Field()

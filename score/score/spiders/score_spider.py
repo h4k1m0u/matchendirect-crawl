@@ -10,7 +10,7 @@ from sunburnt import SolrInterface
 class ScoreSpider(CrawlSpider):
     name = 'score'
     allowed_domains = ['matchendirect.fr']
-    start_urls = ['http://www.matchendirect.fr/angleterre/barclays-premiership-premier-league/2013-49/']
+    start_urls = ['http://www.matchendirect.fr/hier/']
     rules = [Rule(SgmlLinkExtractor(allow=(r'/live-score/[a-z0-9\-]+\.html$', r'/foot-score/[a-z0-9\-]+\.html$')), 'parse_score')]
 
     # init solr instance
@@ -40,6 +40,10 @@ class ScoreSpider(CrawlSpider):
                     scoringArr = scoring.pop().split(' - ')
                     score['scorehost'] = int(scoringArr[0])
                     score['scorevisitor'] = int(scoringArr[1])
+                    if score['scorehost'] == score['scorevisitor']:
+                        score['winner'] = 'draw'
+                    else:
+                        score['winner'] = score['host'] if score['scorehost'] > score['scorevisitor'] else score['visitor']
                     
                     leagueArr = league.xpath('a[1]/text()').extract().pop().split(' : ')
                     score['country'] = leagueArr[0]
