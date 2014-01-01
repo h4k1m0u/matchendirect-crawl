@@ -40,10 +40,10 @@ class ScoreSpider(CrawlSpider):
                     scoringArr = scoring.pop().split(' - ')
                     score['scorehost'] = int(scoringArr[0])
                     score['scorevisitor'] = int(scoringArr[1])
-                    if score['scorehost'] == score['scorevisitor']:
-                        score['winner'] = 'Draw'
-                    else:
-                        score['winner'] = score['host'] if score['scorehost'] > score['scorevisitor'] else score['visitor']
+                    if score['scorehost'] > score['scorevisitor']:
+                        score['winner'] = score['host']
+                    elif score['scorehost'] < score['scorevisitor']:
+                        score['winner'] = score['visitor']
                     
                     leagueArr = league.xpath('a[1]/text()').extract().pop().split(' : ')
                     score['country'] = leagueArr[0]
