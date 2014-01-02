@@ -128,15 +128,15 @@ class ScoreSpider(CrawlSpider):
 
 def format_date(date):
     months = {
-        u'janvier': '1',
-        u'février': '2',
-        u'mars': '3',
-        u'avril': '4',
-        u'mai': '5',
-        u'juin': '6',
-        u'juillet': '7',
-        u'août': '8',
-        u'septembre': '9',
+        u'janvier': '01',
+        u'février': '02',
+        u'mars': '03',
+        u'avril': '04',
+        u'mai': '05',
+        u'juin': '06',
+        u'juillet': '07',
+        u'août': '08',
+        u'septembre': '09',
         u'octobre': '10',
         u'novembre': '11',
         u'décembre': '12'
